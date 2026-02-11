@@ -1,5 +1,9 @@
 
-# CalHacks 2025 
+<p align="center">
+  <img src="assets/agentbay-logo.png" alt="AgentBay Logo" width="120" />
+</p>
+
+<h1 align="center">AgentBay</h1>
 
 ## AgentBay: A2A Powered Multi-Platform E-Commerce  System
 

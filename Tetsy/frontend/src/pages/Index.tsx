@@ -36,7 +36,11 @@ const Index = () => {
   const loadNegotiations = async () => {
     try {
       const { data } = await api.get("/api/negotiations");
-      setNegotiations(data);
+      const processedNegotiations = data.map((neg: Negotiation) => ({
+        ...neg,
+        productImage: neg.productImage?.startsWith('data:image') ? neg.productImage : `data:image/png;base64,${neg.productImage}`
+      }));
+      setNegotiations(processedNegotiations);
     } catch (error) {
       console.error("Failed to load negotiations:", error);
       if (loading) {
@@ -50,7 +54,13 @@ const Index = () => {
   const loadListings = async () => {
     try {
       const { data } = await api.get("/api/listing");
-      setListings(Array.isArray(data) ? data : []);
+      const processedListings = Array.isArray(data)
+        ? data.map(listing => ({
+            ...listing,
+            image: listing.image?.startsWith('data:image') ? listing.image : `data:image/png;base64,${listing.image}`
+          }))
+        : [];
+      setListings(processedListings);
     } catch (error) {
       console.error("Failed to load listings:", error);
       toast.error("Failed to load listings");
@@ -60,10 +70,14 @@ const Index = () => {
   const loadSingleNegotiation = async (negotiationId: string) => {
     try {
       const { data } = await api.get(`/api/negotiations/${negotiationId}`);
-      setNegotiations(prev => 
-        prev.map(n => n.id === negotiationId ? data : n)
+      const processedData = {
+        ...data,
+        productImage: data.productImage?.startsWith('data:image') ? data.productImage : `data:image/png;base64,${data.productImage}`
+      };
+      setNegotiations(prev =>
+        prev.map(n => n.id === negotiationId ? processedData : n)
       );
-      return data;
+      return processedData;
     } catch (error) {
       console.error("Failed to load negotiation:", error);
       throw error;
@@ -83,7 +97,7 @@ const Index = () => {
       const { data } = await api.post("/api/negotiations", {
         product_id: product.id,
         product_title: product.name,
-        product_image: product.image,
+        product_image: product.image.startsWith('data:image') ? product.image : `data:image/png;base64,${product.image}`,
         seller_id: product.seller_id,
         offer_amount: offerAmount,
         message: message || `I'd like to offer $${offerAmount.toFixed(2)} for this item.`

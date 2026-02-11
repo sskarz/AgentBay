@@ -105,6 +105,13 @@ init_db()
 
 # ============ MODELS ============
 
+class AgentListingRequest(BaseModel):
+    name: str
+    description: str
+    price: float
+    seller_id: str
+    image_url: Optional[str] = None
+
 class SellerMessageRequest(BaseModel):
     negotiation_id: str
     seller_id: str
@@ -744,6 +751,55 @@ async def get_listing():
 
         return listings
     except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/agent/listings")
+async def agent_create_listing(request: AgentListingRequest):
+    """Agent endpoint to create a listing with JSON payload."""
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+
+        # Handle image if provided
+        image_data = None
+        if request.image_url:
+            # Try to fetch/read the image
+            try:
+                if request.image_url.startswith('http'):
+                    # Download from URL
+                    async with httpx.AsyncClient() as client:
+                        response = await client.get(request.image_url)
+                        response.raise_for_status()
+                        import base64
+                        image_data = base64.b64encode(response.content).decode('utf-8')
+                else:
+                    # Read from file path
+                    import base64
+                    with open(request.image_url, 'rb') as f:
+                        image_data = base64.b64encode(f.read()).decode('utf-8')
+            except Exception as img_error:
+                logger.warning(f"Failed to load image: {img_error}")
+                # Continue without image
+
+        cursor.execute('''
+            INSERT INTO listings (name, description, price, seller_id, image)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (
+            request.name,
+            request.description,
+            request.price,
+            request.seller_id,
+            image_data
+        ))
+
+        conn.commit()
+        listing_id = cursor.lastrowid
+        conn.close()
+
+        logger.info(f"Agent created listing: {request.name} (ID: {listing_id})")
+        return {"status": "success", "id": listing_id, "name": request.name}
+    except Exception as e:
+        logger.error(f"Error creating agent listing: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
